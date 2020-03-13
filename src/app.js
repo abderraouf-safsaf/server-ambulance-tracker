@@ -29,14 +29,15 @@ setImmediate(() => {
 });
 
 let AMBULANCE_LOCATIONS = {
-  1: { lat: 32.7766642, lng: -96.7969879 }
+  1: { lat: 32.7766642, lng: -96.7969879, available: false }
 };
 
 app.post("/turnon", (req, res, next) => {
   const { lat, lng } = req.body;
   AMBULANCE_LOCATIONS[Object.keys(AMBULANCE_LOCATIONS).length + 1] = {
     lat,
-    lng
+    lng,
+    available: true
   };
   io.emit("allLocations", AMBULANCE_LOCATIONS);
   res.status(200).send();
@@ -50,11 +51,22 @@ app.post("/updateLocation/:id", (req, res, next) => {
   res.status(200).send();
 });
 
+app.post("/assign/:id", (req, res, next) => {
+  const { id } = req.params;
+  if (AMBULANCE_LOCATIONS[id]) {
+    AMBULANCE_LOCATIONS[id].available = false;
+    res.status(200).send();
+  } else {
+    res.status(500).send();
+  }
+});
+
 const simulateMoving = () => {
   setInterval(() => {
     Object.keys(AMBULANCE_LOCATIONS).map(index => {
       const location = AMBULANCE_LOCATIONS[index];
       AMBULANCE_LOCATIONS[index] = {
+        ...AMBULANCE_LOCATIONS[index],
         lat: location.lat + Math.random() / 5000,
         lng: location.lng + Math.random() / 5000
       };
