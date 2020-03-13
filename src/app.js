@@ -4,16 +4,33 @@ import { env, mongo, port, ip, apiRoot } from "./config";
 import express from "./services/express";
 import api from "./api";
 
-const io = require("socket.io")(http);
+const io = require("socket.io")(
+  http /*{
+  handlePreflightRequest: (req, res) => {
+    const headers = {
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Origin": req.headers.origin, //or the specific origin you want to give access to,
+      "Access-Control-Allow-Credentials": true
+    };
+    res.writeHead(200, headers);
+    res.end();
+  }
+}*/
+);
 
 const app = express(apiRoot, api);
 const server = http.createServer(app);
+const cors = require("cors");
+app.use(cors());
 
 //mongoose.connect(mongo.uri);
 //mongoose.Promise = Promise;
+io.on("connection", function(socket) {
+  console.log("a user connected");
+});
 
 setImmediate(() => {
-  server.listen(port, ip, () => {
+  const s = server.listen(port, ip, () => {
     console.log(
       "Express server listening on http://%s:%d, in %s mode",
       ip,
@@ -21,8 +38,9 @@ setImmediate(() => {
       env
     );
 
-    runIo();
+    //runIo();
   });
+  io.listen(s);
 });
 
 const AMBULANCE_LOCATIONS = {
@@ -30,6 +48,7 @@ const AMBULANCE_LOCATIONS = {
 };
 
 const runIo = () => {
+  //io.set("origins", "*:*");
   io.on("connection", socket => {
     console.log("user connected");
     let previousId;
@@ -55,7 +74,6 @@ const runIo = () => {
       documents[doc.id] = doc;
       socket.to(doc.id).emit("document", doc);
     });
-
     io.emit("documents", Object.keys(documents));
   });
 };
